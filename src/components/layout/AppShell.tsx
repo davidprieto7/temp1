@@ -1,13 +1,16 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import {
   CalendarDays,
   Copy,
   Download,
+  ExternalLink,
   List,
   Menu,
   Moon,
   Plus,
   Radio,
+  Share2,
   Sun,
   Trash2,
   Volume2,
@@ -17,6 +20,8 @@ import { toast } from 'sonner';
 import { useEventoStore } from '../../store/eventoStore';
 import { exportarEventoCsv } from '../../lib/exportCsv';
 import { pedirPermisoNotificaciones } from '../../lib/alertEngine';
+import { buildPublicShareUrl, buildPublicUrl } from '../../lib/shareEvento';
+import { setAdminAutenticado } from '../../lib/adminAuth';
 import { horaFin } from '../../lib/timeEngine';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
@@ -86,6 +91,15 @@ export function AppShell({ children }: AppShellProps) {
     toast.success('Live activo — se sigue el rundown en la fecha del evento');
   };
 
+  const copiar = async (texto: string, okMsg: string) => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      toast.success(okMsg);
+    } catch {
+      toast.message(texto);
+    }
+  };
+
   return (
     <div className="flex h-full min-h-0 w-full max-w-[100vw] overflow-hidden bg-[var(--color-surface-muted)] text-[var(--color-text)]">
       {sidebarOpen && (
@@ -104,9 +118,7 @@ export function AppShell({ children }: AppShellProps) {
       >
         <div className="flex items-center justify-between border-b border-[var(--color-border)]/60 px-4 py-4">
           <div>
-            <p className="text-xs font-medium tracking-wide text-[var(--color-accent)]">
-              Rundown
-            </p>
+            <p className="text-xs font-medium tracking-wide text-[var(--color-accent)]">Admin</p>
             <h1 className="text-lg font-semibold leading-tight tracking-tight">Eventos</h1>
           </div>
           <Button
@@ -147,11 +159,20 @@ export function AppShell({ children }: AppShellProps) {
             ))}
           </ul>
         </nav>
+
+        <div className="border-t border-[var(--color-border)]/60 p-3">
+          <Link
+            to="/"
+            className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-[var(--color-accent)] hover:bg-[var(--color-accent-soft)]"
+          >
+            <ExternalLink size={16} />
+            Vista pública
+          </Link>
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 border-b border-[var(--color-border)]/60 bg-[var(--color-surface)]/90 backdrop-blur-xl">
-          {/* Fila 1: menú + título + fecha + vistas */}
           <div className="flex items-start gap-2 px-3 py-2.5 sm:items-center sm:px-5 sm:py-3">
             <Button
               size="sm"
@@ -217,7 +238,6 @@ export function AppShell({ children }: AppShellProps) {
             </div>
           </div>
 
-          {/* Fila 2: acciones */}
           {evento && (
             <div className="flex items-center gap-1 overflow-x-auto overscroll-x-contain border-t border-[var(--color-border)]/60 px-3 py-2 sm:flex-wrap sm:gap-1.5 sm:overflow-visible sm:px-5 sm:py-2.5">
               <Button
@@ -227,7 +247,7 @@ export function AppShell({ children }: AppShellProps) {
                 onClick={() => setModalActividad(true)}
               >
                 <Plus size={14} />
-                <span className="hidden xs:inline sm:inline">Actividad</span>
+                <span className="hidden sm:inline">Actividad</span>
               </Button>
 
               {!liveActivo ? (
@@ -245,6 +265,34 @@ export function AppShell({ children }: AppShellProps) {
                   Detener
                 </Button>
               )}
+
+              <Button
+                size="sm"
+                variant="ghost"
+                className="shrink-0"
+                onClick={() =>
+                  void copiar(
+                    buildPublicShareUrl(evento),
+                    'Link público copiado (incluye el rundown)',
+                  )
+                }
+                aria-label="Compartir vista pública"
+                title="Copiar link público con los datos del evento"
+              >
+                <Share2 size={14} />
+                <span className="hidden lg:inline">Compartir</span>
+              </Button>
+
+              <Button
+                size="sm"
+                variant="ghost"
+                className="shrink-0"
+                onClick={() => void copiar(buildPublicUrl(), 'Link de vista pública copiado')}
+                aria-label="Copiar link público"
+                title="Copiar link de la vista pública"
+              >
+                <ExternalLink size={14} />
+              </Button>
 
               <Button
                 size="sm"
@@ -307,6 +355,17 @@ export function AppShell({ children }: AppShellProps) {
                   aria-label="Tema"
                 >
                   {darkMode ? <Sun size={14} /> : <Moon size={14} />}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setAdminAutenticado(false);
+                    window.location.href = '/admin';
+                  }}
+                  title="Cerrar sesión admin"
+                >
+                  Salir
                 </Button>
               </div>
             </div>
